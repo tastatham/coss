@@ -2,7 +2,7 @@ from coss.areal.areal_weighting import _areal_weighting
 from coss.areal.dasy import _dasy
 from tobler.pycno import pycno_interpolate
 from coss.areal.model import _model
-
+from coss.areal.areal_geobootstrap import _areal_geobootstrap
 from coss.utils import _check_crs_exists, _check_crs_match, _check_uid
 
 
@@ -144,3 +144,102 @@ class areal_interpolation:
             converge=converge,
             verbose=verbose,
         )
+
+    def model(
+        self,
+        df_fit,
+        df_pred,
+        formula="pop_density ~ -1 + building_density",
+        summary=False,
+    ):
+
+        sources, targets, sid, tid = self.areal_checks()
+
+        return _model(
+            sources,
+            targets,
+            df_fit=df_fit,
+            df_pred=df_pred,
+            extensive=self.extensive,
+            intensive=self.intensive,
+            formula=formula,
+            summary=summary,
+        )
+
+    def areal_geobootstrap(
+        self,
+        r=1000,
+        kernel="gaussian",
+        metric="euclidean",
+        bandwidth=1000,
+        source_bounds=None,
+        target_bounds=None,
+        p=1000,
+        method="random points",
+        groupby="median",
+        merge=True,
+    ):
+
+        """
+        A resampling based technique for interpolating values in areal data
+
+        Parameters
+        ----------
+
+        r : int
+            how many resamples with replacement to return
+        kernel : str
+            kernel distance-decay function
+        metric : str
+            how to calculate distances between coordinates
+        bandwidth : int
+           bandwidth or fixed distance
+        source_bounds : array_like
+            (default None)
+        target_bounds : array_like
+            (default None)
+        p : int
+            number of random points to generate points within bounds
+        method : str
+            method for generating coordinates for each polygon
+        groupby : str
+            how to aggregate sampled polygons
+        merge : bool
+            whether to merge in
+        Returns
+        -------
+        array_like
+        """
+
+        if self.extensive is not None:
+            raise ValueError(
+                "Areal geobootstrap only supports intensive \
+                variables"
+            )
+        sources, targets, sid, tid = self.areal_checks()
+
+        stats, stds = _areal_geobootstrap(
+            sources,
+            targets,
+            r=1000,
+            kernel="gaussian",
+            metric="euclidean",
+            bandwidth=1000,
+            col=self.intensive,
+            sid=sid,
+            tid=tid,
+            source_bounds=None,
+            target_bounds=None,
+            p=1000,
+            method="random points",
+            groupby="median",
+        )
+
+        if merge is True:
+            targets[self.intensive] = stats
+            targets["uncertainty"] = stds
+
+            return targets
+
+        else:
+            stats, stds
