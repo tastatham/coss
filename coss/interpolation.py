@@ -1,5 +1,7 @@
 from coss.areal.areal_weighting import _areal_weighting
 from coss.areal.dasy import _dasy
+from tobler.pycno import pycno_interpolate
+
 from coss.utils import _check_crs_exists, _check_crs_match, _check_uid
 
 
@@ -111,4 +113,33 @@ class areal_interpolation:
             how=how,
             geoms=self.geoms,
             all_geoms=self.all_geoms,
+        )
+
+    def pycno(
+        self,
+        cellsize=1000,
+        r=0.2,
+        handle_null=True,
+        converge=3,
+        verbose=False,
+    ):
+
+        sources, targets, sid, tid = self.areal_checks()
+
+        if self.extensive is not None and self.intensive is None:
+            variables = self.extensive
+        elif self.extensive is None and self.intensive is not None:
+            variables = self.intensive
+        else:
+            raise ValueError("Only single variables are currently supported")
+
+        return pycno_interpolate(
+            source_df=sources,
+            target_df=targets,
+            variables=[variables],
+            cellsize=cellsize,
+            r=r,
+            handle_null=handle_null,
+            converge=converge,
+            verbose=verbose,
         )
