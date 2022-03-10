@@ -1,6 +1,7 @@
 from coss.areal.areal_weighting import _areal_weighting
 from coss.areal.dasy import _dasy
 from tobler.pycno import pycno_interpolate
+from coss.areal.model import _model
 
 from coss.utils import _check_crs_exists, _check_crs_match, _check_uid
 
@@ -33,11 +34,11 @@ class areal_interpolation:
             single extensive variable
         intensive : str
             single intensive variable
-        sid : string
+        sid : str
             Column containing unique values
-        tid : string
+        tid : str
             Column containing unique values
-        weights : string
+        weights : str
             type of weights to be computed
         geoms : bool (default False)
             whether to return target geometries
