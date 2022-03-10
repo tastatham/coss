@@ -1,4 +1,5 @@
 from coss.areal.areal_weighting import _areal_weighting
+from coss.areal.dasy import _dasy
 from coss.utils import _check_crs_exists, _check_crs_match, _check_uid
 
 
@@ -45,7 +46,7 @@ class areal_interpolation:
         Return
         ------
         type: pd.DataFrame or gpd.GeoDataFrame
-
+            targets containing interpolated values
         """
 
         self.sources = sources
@@ -92,4 +93,22 @@ class areal_interpolation:
             tid=tid,
             geoms=self.geoms,
             all_geoms=self.geoms,
+        )
+
+    def dasy(self, mask, how="clip"):
+
+        sources, targets, sid, tid = self.areal_checks()
+
+        return _dasy(
+            sources,
+            targets,
+            mask=mask,
+            extensive=self.extensive,
+            intensive=self.intensive,
+            weights=self.weights,
+            sid=sid,
+            tid=tid,
+            how=how,
+            geoms=self.geoms,
+            all_geoms=self.all_geoms,
         )
