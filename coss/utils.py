@@ -1,6 +1,3 @@
-import numpy as np
-
-
 def _check_crs_match(sources, targets):
     """Check crs of GeoDataFrame match"""
 
@@ -20,12 +17,16 @@ def _check_crs_exists(gdf):
         raise KeyError("GeoDataFrame must contain a crs")
 
 
-def _check_uid(df, uid=None):
-    """Creates a unique identifier in GeoDataFrame is not specified"""
+def _check_uid(df, uid=None, uid_type="sources"):
+    """Creates a unique identifier for source or target GeoDataFrame"""
 
     if uid is None:
-        uid = df.name + "_uid"
-        df[uid] = np.arrange(len(df))
+        import uuid
+        if uid_type == "sources":
+            uid = "sid"
+        elif uid_type == "targets":
+            uid = "tid"
+        df[uid] = df.apply(lambda _: uuid.uuid4(), axis=1)
 
     return df, uid
 
