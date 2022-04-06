@@ -77,8 +77,8 @@ class areal_interpolation:
 
         _check_crs_match(self.sources, self.targets)
 
-        sources, sid = _check_uid(self.sources, self.sid)
-        targets, tid = _check_uid(self.targets, self.tid)
+        sources, sid = _check_uid(self.sources, self.sid, uid_type="sources")
+        targets, tid = _check_uid(self.targets, self.tid, uid_type="targets")
 
         return sources.copy(), targets.copy(), sid, tid
 
