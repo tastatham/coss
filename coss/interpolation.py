@@ -3,7 +3,7 @@ from coss.areal.dasy import _dasy
 from tobler.pycno import pycno_interpolate
 from coss.areal.model import _model
 from coss.areal.areal_geobootstrap import _areal_geobootstrap
-from coss.utils import _check_crs_exists, _check_crs_match, _check_uid
+from coss.utils import _crs, _uid
 
 
 class areal_interpolation:
@@ -62,7 +62,7 @@ class areal_interpolation:
         self.geoms = geoms
         self.all_geoms = all_geoms
 
-    def areal_checks(self):
+    def areal_checks(self, method):
         """A series of checks to ensure areal interpolation is valid"""
 
         if self.extensive is None and self.intensive is None:
@@ -72,19 +72,19 @@ class areal_interpolation:
                 "to interpolate values from sources to targets"
             )
 
-        _check_crs_exists(self.sources)
-        _check_crs_exists(self.targets)
+        _crs(self.sources, self.targets)
 
-        _check_crs_match(self.sources, self.targets)
+        uid_methods = ["areal", "dasy", "geobootstrap"]
 
-        sources, sid = _check_uid(self.sources, self.sid, uid_type="sources")
-        targets, tid = _check_uid(self.targets, self.tid, uid_type="targets")
+        if method in uid_methods:
+            sources, sid = _uid(self.sources, self.sid, uid_type="sources")
+            targets, tid = _uid(self.targets, self.tid, uid_type="targets")
 
-        return sources.copy(), targets.copy(), sid, tid
+            return sources.copy(), targets.copy(), sid, tid
 
     def areal_weighting(self):
 
-        sources, targets, sid, tid = self.areal_checks()
+        sources, targets, sid, tid = self.areal_checks(method="areal")
 
         return _areal_weighting(
             sources,
@@ -100,7 +100,7 @@ class areal_interpolation:
 
     def dasy(self, mask, how="clip"):
 
-        sources, targets, sid, tid = self.areal_checks()
+        sources, targets, sid, tid = self.areal_checks(method="dasy")
 
         return _dasy(
             sources,
@@ -125,7 +125,7 @@ class areal_interpolation:
         verbose=False,
     ):
 
-        sources, targets, sid, tid = self.areal_checks()
+        self.areal_checks(method="pycno")
 
         if self.extensive is not None and self.intensive is None:
             variables = self.extensive
@@ -135,8 +135,8 @@ class areal_interpolation:
             raise ValueError("Only single variables are currently supported")
 
         return pycno_interpolate(
-            source_df=sources,
-            target_df=targets,
+            source_df=self.sources,
+            target_df=self.targets,
             variables=[variables],
             cellsize=cellsize,
             r=r,
@@ -153,11 +153,11 @@ class areal_interpolation:
         summary=False,
     ):
 
-        sources, targets, sid, tid = self.areal_checks()
+        self.areal_checks(method="model")
 
         return _model(
-            sources,
-            targets,
+            self.sources,
+            self.targets,
             df_fit=df_fit,
             df_pred=df_pred,
             extensive=self.extensive,
@@ -216,7 +216,7 @@ class areal_interpolation:
                 "Areal geobootstrap only supports intensive \
                 variables"
             )
-        sources, targets, sid, tid = self.areal_checks()
+        sources, targets, sid, tid = self.areal_checks(method="geobootstrap")
 
         stats, stds = _areal_geobootstrap(
             sources,
