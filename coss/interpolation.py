@@ -3,7 +3,7 @@ from coss.areal.dasy import _dasy
 from tobler.pycno import pycno_interpolate
 from coss.areal.model import _model
 from coss.areal.areal_geobootstrap import _areal_geobootstrap
-from coss.utils import _check_crs_exists, _check_crs_match, _uid
+from coss.utils import _crs, _uid
 
 
 class areal_interpolation:
@@ -72,10 +72,7 @@ class areal_interpolation:
                 "to interpolate values from sources to targets"
             )
 
-        _check_crs_exists(self.sources)
-        _check_crs_exists(self.targets)
-
-        _check_crs_match(self.sources, self.targets)
+        _crs(self.sources, self.targets)
 
         sources, sid = _uid(self.sources, self.sid, uid_type="sources")
         targets, tid = _uid(self.targets, self.tid, uid_type="targets")

@@ -1,3 +1,9 @@
+def _crs(sources, targets):
+ 
+    _check_crs_exists(sources), _check_crs_exists(targets)
+    _check_crs_match(sources, targets)
+
+
 def _check_crs_match(sources, targets):
     """Check crs of GeoDataFrame match"""
 
@@ -21,7 +27,7 @@ def _uid(df, uid=None, uid_type="sources"):
     """Checks unique identifier exists and if valid"""
 
     if uid is None:
-        df = _create_uid(df, uid_type="sources")
+        df, uid = _create_uid(df, uid_type)
     else:
         _check_uid(df[uid])
 
