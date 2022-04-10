@@ -177,7 +177,6 @@ class areal_interpolation:
         p=1000,
         method="random points",
         groupby="median",
-        merge=True,
     ):
 
         """
@@ -204,8 +203,7 @@ class areal_interpolation:
             method for generating coordinates for each polygon
         groupby : str
             how to aggregate sampled polygons
-        merge : bool
-            whether to merge in
+
         Returns
         -------
         array_like
@@ -235,11 +233,7 @@ class areal_interpolation:
             groupby="median",
         )
 
-        if merge is True:
-            targets[self.intensive] = stats
-            targets["uncertainty"] = stds
+        targets[self.intensive] = stats
+        targets["uncertainty"] = stds
 
-            return targets
-
-        else:
-            stats, stds
+        return targets
