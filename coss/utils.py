@@ -1,5 +1,9 @@
+import numpy as np
+import geopandas as gpd
+
+
 def _crs(sources, targets):
- 
+
     _check_crs_exists(sources), _check_crs_exists(targets)
     _check_crs_match(sources, targets)
 
@@ -68,3 +72,54 @@ def _get_bbox(gdf):
 
     xmin, ymin, xmax, ymax = gdf.total_bounds
     return (xmin, ymin, xmax, ymax)
+
+
+def _h3fy_updated(gdf, resolution):
+    """
+    h3_radius values calculated using;
+    ```python
+    import numpy as np
+    import pandas as pd
+
+    df = pd.read_html("https://h3geo.org/docs/core-library/restable/")[0]
+    y = df["Average Hexagon Area (km2)"].to_numpy()
+    cos_30 = np.cos(np.deg2rad(30))
+    sin_30 = np.sin(np.deg2rad(30))
+    radius_km = np.sqrt(y / ((cos_30 * sin_30) * 6)
+    )
+    radius_m = radius / 1000
+    ```
+    """
+    from tobler.util import h3fy
+    from shapely.geometry import box
+
+    # h3 radius in m
+    h3_radius = np.array(
+        [
+            2.79076325e05,
+            4.83445409e05,
+            1.82725189e05,
+            6.90636300e04,
+            2.61035980e04,
+            9.86623300e03,
+            3.72908500e03,
+            1.40946200e03,
+            5.32727000e02,
+            2.01352000e02,
+            7.61040000e01,
+            2.87640000e01,
+            1.08720000e01,
+            4.11100000e00,
+            1.55700000e00,
+            5.89000000e-01,
+        ]
+    )
+
+    poly = box(*gdf.total_bounds)
+
+    aoi = gpd.GeoDataFrame()
+    aoi.loc[0, "geometry"] = poly
+    aoi.crs = gdf.crs
+    aoi = aoi.buffer(h3_radius[resolution])
+
+    return h3fy(aoi, resolution=resolution, clip=False, return_geoms=True)
