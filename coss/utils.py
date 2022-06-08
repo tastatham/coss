@@ -78,7 +78,7 @@ def _get_bbox(gdf):
 def rio2gdf(rioxarray_obj, method="points", mask=None, crs=None):
     """
     A function that convert a rioxarray object to a
-    GeoPandas GeoDataFrame points object
+    GeoPandas GeoDataFrame object
     """
 
     if crs is None:
@@ -129,7 +129,7 @@ def _get_xy_coords(rioxarray_obj):
 
 
 def _cartesian_prod(x, y):
-    """Calculate the cartesian product of x and y coordinates"""
+    """Calculate the cartesian product of x and y coords"""
 
     mesh = np.meshgrid(x, y)
     elem = mesh[0].size
@@ -139,7 +139,7 @@ def _cartesian_prod(x, y):
 
 
 def _mask(vals, coords, mask):
-    """mask values and array"""
+    """mask values and coords"""
 
     ind = np.where(vals > mask)[0]
 
@@ -147,18 +147,13 @@ def _mask(vals, coords, mask):
 
 
 def rio2points(coords):
-    """
-    A function that convert a rioxarray object to a
-    GeoPandas GeoDataFrame points object
-    """
+    """A function that returns point geoms for a rioxarray object"""
+
     return gpd.points_from_xy(coords[:, 0], coords[:, 1])
 
 
 def rio2polygons(coords, rioxarray_obj):
-    """
-    A function that convert a rioxarray object to a
-    GeoPandas GeoDataFrame polygon object
-    """
+    """A function that returns polygon geoms for a rioxarray object"""
 
     from pygeos import box
 
