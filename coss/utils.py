@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import geopandas as gpd
 
 
@@ -72,6 +73,106 @@ def _get_bbox(gdf):
 
     xmin, ymin, xmax, ymax = gdf.total_bounds
     return (xmin, ymin, xmax, ymax)
+
+
+def rio2gdf(rioxarray_obj, method="points", mask=None, crs=None):
+    """
+    A function that convert a rioxarray object to a
+    GeoPandas GeoDataFrame points object
+    """
+
+    if crs is None:
+        # Get crs
+        crs = rioxarray_obj.rio.crs.to_epsg()
+        if crs is None:
+            raise ValueError(f"{crs} is invalid, please specify a valid crs")
+
+    # Get cell values and coords
+    vals = _get_rio_vals(rioxarray_obj)
+    coords = _get_rio_coords(rioxarray_obj)
+
+    # Filter vals using mask
+    if mask is not None:
+        attributes, coords = _mask(vals, coords, mask)
+
+    methods = ["points", "polygons"]
+
+    if method == methods[0]:
+        geoms = rio2points(coords)
+    elif method == methods[1]:
+        geoms = rio2polygons(coords, rioxarray_obj)
+    else:
+        raise ValueError(f"Only '{methods}' are supported")
+
+    return gpd.GeoDataFrame(
+        pd.Series(attributes.ravel(), name="Value"),
+        geometry=geoms,
+        crs=crs,
+        )
+
+
+def _get_rio_vals(rioxarray_obj):
+    """Get rio cell values"""
+    return np.array(rioxarray_obj).reshape(-1, 1)
+
+
+def _get_rio_coords(rioxarray_obj):
+    """Get rio corodinates"""
+    x, y = _get_xy_coords(rioxarray_obj)
+
+    return _cartesian_prod(x, y)
+
+
+def _get_xy_coords(rioxarray_obj):
+    """Get xy coords from rasterio object"""
+    return np.array(rioxarray_obj.x), np.array(rioxarray_obj.y)
+
+
+def _cartesian_prod(x, y):
+    """Calculate the cartesian product of x and y coordinates"""
+
+    mesh = np.meshgrid(x, y)
+    elem = mesh[0].size
+    concat = np.concatenate(mesh).ravel()
+
+    return np.reshape(concat, (2, elem)).T
+
+
+def _mask(vals, coords, mask):
+    """mask values and array"""
+
+    ind = np.where(vals > mask)[0]
+
+    return vals[ind], coords[ind]
+
+
+def rio2points(coords):
+    """
+    A function that convert a rioxarray object to a
+    GeoPandas GeoDataFrame points object
+    """
+    return gpd.points_from_xy(coords[:, 0], coords[:, 1])
+
+
+def rio2polygons(coords, rioxarray_obj):
+    """
+    A function that convert a rioxarray object to a
+    GeoPandas GeoDataFrame polygon object
+    """
+
+    from pygeos import box
+
+    # Juggle around x, y values
+    af = rioxarray_obj.rio.transform()
+    xres, yres = abs(af[0]), abs(af[4])
+
+    xmins = coords[:, 0] - (xres / 2)
+    xmaxs = coords[:, 0] + (xres / 2)
+    ymins = coords[:, 1] + (yres / 2)
+    ymaxs = coords[:, 1] - (yres / 2)
+
+    # Create polygons
+    return box(xmins, ymins, xmaxs, ymaxs)
 
 
 def _h3fy_updated(gdf, resolution):
