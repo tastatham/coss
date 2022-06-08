@@ -1,6 +1,5 @@
 import numpy as np
 from geobootstrap.sample import geobootstrap
-from geobootstrap.utils import _poly_to_points
 
 
 def _areal_geobootstrap(
@@ -10,15 +9,9 @@ def _areal_geobootstrap(
     kernel="gaussian",
     metric="euclidean",
     bandwidth=1000,
+    fixed=True,
     col="pop_density",
-    sid="sid",
-    tid="tid",
-    source_bounds=None,
-    target_bounds=None,
-    p=1000,
-    method="random points",
     groupby="median",
-    dropna=True,
 ):
 
     """
@@ -29,10 +22,10 @@ def _areal_geobootstrap(
 
     Parameters
     ----------
+
     sources : gpd.GeoDataFrame
-        GeoDataFrame containing variable(s) to be interpolated
+        GeoDataFrame containing a variable of interest to be interpolated
     targets : gpd.GeoDataFrame
-        GeoDataFrame where variables will be assigned
         target GeoDatFrame containing unique identifier
     r : int
         how many resamples with replacement to return
@@ -41,21 +34,11 @@ def _areal_geobootstrap(
     metric : str
         how to calculate distances between coordinates
     bandwidth : int
-       bandwidth or fixed distance
+       bandwidth (distance)
+    fixed: bool
+        whether to apply a fixed or adaptive (knn) kernel
     col : str
         column to interpolate from sources to targets
-    sid : str
-        source GeoDatFrame containing unique identifier
-    tid : str
-        target GeoDataFrame containing unique identifier
-    source_bounds : array_like
-        source GeoDataFrame bounds
-    target_bounds : array_like
-        target GeoDataFrame bounds
-    p : int
-        number of random points to generate points within bounds
-    method : str
-        method for generating coordinates for each polygon
     groupby : str
         how to aggregate sampled polygons
 
@@ -88,48 +71,20 @@ def _areal_geobootstrap(
     sources = sources.copy()
     targets = targets.copy()
 
-    if source_bounds is None:
-        source_bounds = sources.bounds.to_numpy()
-    if target_bounds is None:
-        target_bounds = targets.bounds.to_numpy()
-
-    source_points = _poly_to_points(
-        sources,
-        method,
-        uid=sid,
-        bounds=source_bounds,
-        p=p,
-        n=1,  # 1 point per polygon
-        join=True,
-    )
-
-    target_points = _poly_to_points(
-        targets,
-        method=method,
-        uid=tid,
-        bounds=target_bounds,
-        p=p,
-        n=1,  # 1 point per polygon
-        join=True,
-    )
-
     gs = geobootstrap(
-        source_points,
-        target_points,
-        r,
-        kernel,
-        metric,
-        bandwidth,
+        gdf1=sources,
+        gdf2=targets,
+        r=r,
+        kernel=kernel,
+        metric=metric,
+        bandwidth=bandwidth,
+        fixed=fixed,
     )
     # TEMP
     gs = [g[col].to_numpy() for g in gs]
 
     if groupby == "median":
-        if dropna is True:
-            stats = np.nanmedian(gs, axis=1)
-            std = np.nanstd(gs, axis=1)
-        else:
-            stats = np.nanmedian(gs, axis=1)
-            std = np.nanstd(gs, axis=1)
+        stats = np.nanmedian(gs, axis=1)
+        std = np.nanstd(gs, axis=1)
 
-        return stats, std
+    return stats, std

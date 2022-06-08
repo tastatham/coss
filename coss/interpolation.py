@@ -172,10 +172,8 @@ class areal_interpolation:
         kernel="gaussian",
         metric="euclidean",
         bandwidth=1000,
-        source_bounds=None,
-        target_bounds=None,
-        p=1000,
-        method="random points",
+        fixed=True,
+        col="income",
         groupby="median",
     ):
 
@@ -206,7 +204,8 @@ class areal_interpolation:
 
         Returns
         -------
-        array_like
+        targets: gpd.GeoDataFrame
+            targets containing interpolated values
         """
 
         if self.extensive is not None:
@@ -217,20 +216,15 @@ class areal_interpolation:
         sources, targets, sid, tid = self.areal_checks(method="geobootstrap")
 
         stats, stds = _areal_geobootstrap(
-            sources,
-            targets,
-            r=1000,
-            kernel="gaussian",
-            metric="euclidean",
-            bandwidth=1000,
-            col=self.intensive,
-            sid=sid,
-            tid=tid,
-            source_bounds=None,
-            target_bounds=None,
-            p=1000,
-            method="random points",
-            groupby="median",
+            sources=sources,
+            targets=targets,
+            r=r,
+            kernel=kernel,
+            metric=metric,
+            bandwidth=bandwidth,
+            fixed=fixed,
+            col=col,
+            groupby=groupby,
         )
 
         targets[self.intensive] = stats
