@@ -94,7 +94,7 @@ def _areal_geobootstrap(
     elif average == "median":
         averages = nanmedian(gs, axis=1)
     elif average == "mode":
-        averages = mode(gs, axis=1)
+        averages = mode(gs, axis=1)[0]
 
     if spread == "std":
         spreads = nanstd(gs, axis=1)
