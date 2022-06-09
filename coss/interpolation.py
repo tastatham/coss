@@ -74,7 +74,7 @@ class areal_interpolation:
 
         _crs(self.sources, self.targets)
 
-        uid_methods = ["areal", "dasy", "geobootstrap"]
+        uid_methods = ["areal", "dasy"]
 
         if method in uid_methods:
             sources, sid = _uid(self.sources, self.sid, uid_type="sources")
@@ -125,8 +125,6 @@ class areal_interpolation:
         verbose=False,
     ):
 
-        self.areal_checks(method="pycno")
-
         if self.extensive is not None and self.intensive is None:
             variables = self.extensive
         elif self.extensive is None and self.intensive is not None:
@@ -172,10 +170,7 @@ class areal_interpolation:
         kernel="gaussian",
         metric="euclidean",
         bandwidth=1000,
-        source_bounds=None,
-        target_bounds=None,
-        p=1000,
-        method="random points",
+        fixed=True,
         groupby="median",
     ):
 
@@ -206,7 +201,8 @@ class areal_interpolation:
 
         Returns
         -------
-        array_like
+        targets: gpd.GeoDataFrame
+            targets containing interpolated values
         """
 
         if self.extensive is not None:
@@ -217,20 +213,15 @@ class areal_interpolation:
         sources, targets, sid, tid = self.areal_checks(method="geobootstrap")
 
         stats, stds = _areal_geobootstrap(
-            sources,
-            targets,
-            r=1000,
-            kernel="gaussian",
-            metric="euclidean",
-            bandwidth=1000,
+            sources=sources,
+            targets=targets,
+            r=r,
+            kernel=kernel,
+            metric=metric,
+            bandwidth=bandwidth,
+            fixed=fixed,
             col=self.intensive,
-            sid=sid,
-            tid=tid,
-            source_bounds=None,
-            target_bounds=None,
-            p=1000,
-            method="random points",
-            groupby="median",
+            groupby=groupby,
         )
 
         targets[self.intensive] = stats
