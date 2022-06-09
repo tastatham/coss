@@ -125,8 +125,6 @@ class areal_interpolation:
         verbose=False,
     ):
 
-        self.areal_checks(method="pycno")
-
         if self.extensive is not None and self.intensive is None:
             variables = self.extensive
         elif self.extensive is None and self.intensive is not None:
