@@ -212,7 +212,8 @@ class areal_interpolation:
                 "Areal geobootstrap only supports intensive \
                 variables"
             )
-        sources, targets, sid, tid = self.areal_checks(method="geobootstrap")
+        sources = self.sources.copy()
+        targets = self.targets.copy()
 
         average, spread = _areal_geobootstrap(
             sources=sources,
