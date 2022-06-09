@@ -10,8 +10,9 @@ def _areal_geobootstrap(
     metric="euclidean",
     bandwidth=1000,
     fixed=True,
-    col="pop_density",
-    groupby="median",
+    col="income",
+    average="mean",
+    spread="std",
 ):
 
     """
@@ -39,15 +40,17 @@ def _areal_geobootstrap(
         whether to apply a fixed or adaptive (knn) kernel
     col : str
         column to interpolate from sources to targets
-    groupby : str
-        how to aggregate sampled polygons
+    average : array_like
+        average statistic to compute
+    spread : array_like
+        measure of spread to compute
 
     Returns
     ---------
-    stats : array_like
-        computed average statistic for each target
-    std : array_like
-        standard deviation for each target
+    average : array_like
+        computed average statistic for each estimate
+    spread : array_like
+        measure of spread for each estimate
     """
 
     """
@@ -59,10 +62,15 @@ def _areal_geobootstrap(
             )
     """
 
-    groupbys = ["median"]
+    averages = ["mean", "median", "mode"]
 
-    if groupby not in groupbys:
-        raise ValueError(f"Only {groupbys} are supported")
+    if average not in averages:
+        raise ValueError(f"Only {average} are supported")
+
+    spreads = ["std", "iqr", "var", "range"]
+
+    if spread not in spreads:
+        raise ValueError(f"Only {spread} are supported")
 
     if r is None:
         print("Using length of targets as the number of resamples with replacement")
@@ -83,8 +91,21 @@ def _areal_geobootstrap(
     # TEMP
     gs = [g[col].to_numpy() for g in gs]
 
-    if groupby == "median":
-        stats = np.nanmedian(gs, axis=1)
-        std = np.nanstd(gs, axis=1)
+    if average == "mean":
+        averages = np.nanmean(gs, axis=1)
+    elif average == "median":
+        averages = np.nanmedian(gs, axis=1)
+    elif average == "mode":
+        averages = np.mode(gs, axis=1)
 
-    return stats, std
+    if spread == "std":
+        spreads = np.nanstd(gs, axis=1)
+    if spread == "iqr":
+        q75, q25 = np.percentile(gs, [75, 25])
+        spreads = q75 - q25
+    elif spread == "var":
+        spreads = np.var(gs, axis=1)
+    elif spread == "range":
+        spreads = np.ptp(gs, axis=1)
+
+    return averages, spreads

@@ -171,7 +171,8 @@ class areal_interpolation:
         metric="euclidean",
         bandwidth=1000,
         fixed=True,
-        groupby="median",
+        average="mean",
+        spread="std",
     ):
 
         """
@@ -196,9 +197,10 @@ class areal_interpolation:
             number of random points to generate points within bounds
         method : str
             method for generating coordinates for each polygon
-        groupby : str
-            how to aggregate sampled polygons
-
+        average : array_like
+            average statistic to compute
+        spread : array_like
+            measure of spread to compute
         Returns
         -------
         targets: gpd.GeoDataFrame
@@ -212,7 +214,7 @@ class areal_interpolation:
             )
         sources, targets, sid, tid = self.areal_checks(method="geobootstrap")
 
-        stats, stds = _areal_geobootstrap(
+        average, spread = _areal_geobootstrap(
             sources=sources,
             targets=targets,
             r=r,
@@ -221,10 +223,11 @@ class areal_interpolation:
             bandwidth=bandwidth,
             fixed=fixed,
             col=self.intensive,
-            groupby=groupby,
+            average=average,
+            spread=spread,
         )
 
-        targets[self.intensive] = stats
-        targets["uncertainty"] = stds
+        targets[self.intensive] = average
+        targets["uncertainty"] = spread
 
         return targets
