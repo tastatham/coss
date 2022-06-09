@@ -215,7 +215,7 @@ class areal_interpolation:
         sources = self.sources.copy()
         targets = self.targets.copy()
 
-        average, spread = _areal_geobootstrap(
+        averages, spreads = _areal_geobootstrap(
             sources=sources,
             targets=targets,
             r=r,
@@ -228,7 +228,7 @@ class areal_interpolation:
             spread=spread,
         )
 
-        targets[self.intensive] = average
-        targets["uncertainty"] = spread
+        targets[average + "_" + self.intensive] = averages
+        targets[spread] = spreads
 
         return targets
