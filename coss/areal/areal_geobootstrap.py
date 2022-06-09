@@ -1,4 +1,5 @@
-import numpy as np
+from numpy import nanmean, nanmedian, nanstd, nanpercentile, nanvar, ptp
+from scipy.stats import mode
 from geobootstrap.sample import geobootstrap
 
 
@@ -89,20 +90,20 @@ def _areal_geobootstrap(
     gs = [g[col].to_numpy() for g in gs]
 
     if average == "mean":
-        averages = np.nanmean(gs, axis=1)
+        averages = nanmean(gs, axis=1)
     elif average == "median":
-        averages = np.nanmedian(gs, axis=1)
+        averages = nanmedian(gs, axis=1)
     elif average == "mode":
-        averages = np.mode(gs, axis=1)
+        averages = mode(gs, axis=1)
 
     if spread == "std":
-        spreads = np.nanstd(gs, axis=1)
+        spreads = nanstd(gs, axis=1)
     if spread == "iqr":
-        q75, q25 = np.nanpercentile(gs, [75, 25])
+        q75, q25 = nanpercentile(gs, [75, 25])
         spreads = q75 - q25
     elif spread == "var":
-        spreads = np.nanvar(gs, axis=1)
+        spreads = nanvar(gs, axis=1)
     elif spread == "range":
-        spreads = np.ptp(gs, axis=1)
+        spreads = ptp(gs, axis=1)
 
     return averages, spreads
