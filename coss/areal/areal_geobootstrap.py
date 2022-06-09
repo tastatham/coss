@@ -76,9 +76,6 @@ def _areal_geobootstrap(
         print("Using length of targets as the number of resamples with replacement")
         r = len(targets)
 
-    sources = sources.copy()
-    targets = targets.copy()
-
     gs = geobootstrap(
         gdf1=sources,
         gdf2=targets,
@@ -101,10 +98,10 @@ def _areal_geobootstrap(
     if spread == "std":
         spreads = np.nanstd(gs, axis=1)
     if spread == "iqr":
-        q75, q25 = np.percentile(gs, [75, 25])
+        q75, q25 = np.nanpercentile(gs, [75, 25])
         spreads = q75 - q25
     elif spread == "var":
-        spreads = np.var(gs, axis=1)
+        spreads = np.nanvar(gs, axis=1)
     elif spread == "range":
         spreads = np.ptp(gs, axis=1)
 
