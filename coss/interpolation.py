@@ -74,7 +74,7 @@ class areal_interpolation:
 
         _crs(self.sources, self.targets)
 
-        uid_methods = ["areal", "dasy", "geobootstrap"]
+        uid_methods = ["areal", "dasy"]
 
         if method in uid_methods:
             sources, sid = _uid(self.sources, self.sid, uid_type="sources")
@@ -173,7 +173,6 @@ class areal_interpolation:
         metric="euclidean",
         bandwidth=1000,
         fixed=True,
-        col="income",
         groupby="median",
     ):
 
@@ -223,7 +222,7 @@ class areal_interpolation:
             metric=metric,
             bandwidth=bandwidth,
             fixed=fixed,
-            col=col,
+            col=self.intensive,
             groupby=groupby,
         )
 
