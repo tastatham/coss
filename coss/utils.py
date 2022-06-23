@@ -93,7 +93,7 @@ def rio2gdf(rioxarray_obj, method="points", mask=None, crs=None):
 
     # Filter vals using mask
     if mask is not None:
-        attributes, coords = _mask(vals, coords, mask)
+        vals, coords = _mask(vals, coords, mask)
 
     methods = ["points", "polygons"]
 
@@ -105,7 +105,7 @@ def rio2gdf(rioxarray_obj, method="points", mask=None, crs=None):
         raise ValueError(f"Only '{methods}' are supported")
 
     return gpd.GeoDataFrame(
-        pd.Series(attributes.ravel(), name="Value"),
+        pd.Series(vals.ravel(), name="Value"),
         geometry=geoms,
         crs=crs,
         )
