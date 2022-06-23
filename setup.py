@@ -9,7 +9,7 @@ def readme():
 install_requires = [
     "statsmodels==0.13.1",
     "geopandas==0.10.2",
-    "geobootstrap==0.1",
+    "geobootstrap==0.11",
     "tobler==0.8.2",
     "astropy==5.0.1",
 ]
