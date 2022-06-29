@@ -184,7 +184,7 @@ def st_create_grid(gdf, res):
 
     x, y = _grid_centroids(total_bounds, res)
     coords = _cartesian_prod(x, y)
-    geoms = _create_grid_geoms(coords, res)
+    geoms = _create_grid_geoms(coords, xres=res, yres=res)
     # convex hull / concave hull
     grid = gpd.GeoDataFrame(geometry=geoms, crs=gdf.crs)
 
