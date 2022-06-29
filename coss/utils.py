@@ -165,7 +165,7 @@ def rio2polygons(coords, rioxarray_obj):
 
 def _create_grid_geoms(coords, xres, yres):
 
-    """Create polygon grids based on x,y coords and x and y resolution"""
+    """Create polygon grids based on x,y projected coords and res"""
     from pygeos import box
 
     xmins = coords[:, 0] - (xres / 2)
