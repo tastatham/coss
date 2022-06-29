@@ -42,6 +42,7 @@ def _uid(df, uid=None, uid_type="sources"):
 def _create_uid(df, uid_type="sources"):
     """Creates a unique identifer"""
     import uuid
+
     if uid_type == "sources":
         uid = "sid"
     elif uid_type == "targets":
@@ -108,7 +109,7 @@ def rio2gdf(rioxarray_obj, method="points", mask=None, crs=None):
         pd.Series(vals.ravel(), name="Value"),
         geometry=geoms,
         crs=crs,
-        )
+    )
 
 
 def _get_rio_vals(rioxarray_obj):
@@ -155,11 +156,17 @@ def rio2points(coords):
 def rio2polygons(coords, rioxarray_obj):
     """A function that returns polygon geoms for a rioxarray object"""
 
-    from pygeos import box
-
     # Juggle around x, y values
     af = rioxarray_obj.rio.transform()
     xres, yres = abs(af[0]), abs(af[4])
+
+    return _create_grid_geoms(coords, xres, yres)
+
+
+def _create_grid_geoms(coords, xres, yres):
+
+    """Create polygon grids based on x,y projected coords and res"""
+    from pygeos import box
 
     xmins = coords[:, 0] - (xres / 2)
     xmaxs = coords[:, 0] + (xres / 2)
@@ -168,6 +175,31 @@ def rio2polygons(coords, rioxarray_obj):
 
     # Create polygons
     return box(xmins, ymins, xmaxs, ymaxs)
+
+
+def st_make_grid(gdf, res):
+    """Assumes projected coords e.g. res in metres"""
+
+    total_bounds = gdf.total_bounds
+
+    x, y = _grid_centroids(total_bounds, res)
+    coords = _cartesian_prod(x, y)
+    geoms = _create_grid_geoms(coords, xres=res, yres=res)
+    # convex hull / concave hull
+    grid = gpd.GeoDataFrame(geometry=geoms, crs=gdf.crs)
+
+    return grid
+
+
+def _grid_centroids(total_bounds, res):
+    """Calculate centroid for all grid cells"""
+
+    xmin, ymin, xmax, ymax = total_bounds
+
+    x = np.arange(start=(xmin + res), stop=xmax, step=res)
+    y = np.arange(start=(ymin + res), stop=ymax, step=res)
+
+    return x, y
 
 
 def _h3fy_updated(gdf, resolution):
