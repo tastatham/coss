@@ -177,7 +177,7 @@ def _create_grid_geoms(coords, xres, yres):
     return box(xmins, ymins, xmaxs, ymaxs)
 
 
-def st_create_grid(gdf, res):
+def st_make_grid(gdf, res):
     """Assumes projected coords e.g. res in metres"""
 
     total_bounds = gdf.total_bounds
