@@ -177,6 +177,31 @@ def _create_grid_geoms(coords, xres, yres):
     return box(xmins, ymins, xmaxs, ymaxs)
 
 
+def st_create_grid(gdf, res):
+    """Assumes projected coords e.g. res in metres"""
+
+    total_bounds = gdf.total_bounds
+
+    x, y = _grid_centroids(total_bounds, res)
+    coords = _cartesian_prod(x, y)
+    geoms = _create_grid_geoms(coords, res)
+    # convex hull / concave hull
+    grid = gpd.GeoDataFrame(geometry=geoms, crs=gdf.crs)
+
+    return grid
+
+
+def _grid_centroids(total_bounds, res):
+    """Calculate centroid for all grid cells"""
+
+    xmin, ymin, xmax, ymax = total_bounds
+
+    x = np.arange(start=(xmin + res), stop=xmax, step=res)
+    y = np.arange(start=(ymin + res), stop=ymax, step=res)
+
+    return x, y
+
+
 def _h3fy_updated(gdf, resolution):
     """
     h3_radius values calculated using;
