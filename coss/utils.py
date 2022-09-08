@@ -1,4 +1,6 @@
+import warnings
 import numpy as np
+import dask.array as da
 import pandas as pd
 import geopandas as gpd
 
@@ -76,7 +78,14 @@ def _get_bbox(gdf):
     return (xmin, ymin, xmax, ymax)
 
 
-def rio2gdf(rioxarray_obj, method="points", mask=None, crs=None):
+def rio2gdf(
+    rioxarray_obj,
+    method="points",
+    mask=None,
+    crs=None,
+    name="pop",
+    dask=True,
+):
     """
     A function that convert a rioxarray object to a
     GeoPandas GeoDataFrame object
@@ -90,11 +99,11 @@ def rio2gdf(rioxarray_obj, method="points", mask=None, crs=None):
 
     # Get cell values and coords
     vals = _get_rio_vals(rioxarray_obj)
-    coords = _get_rio_coords(rioxarray_obj)
+    coords = _get_rio_coords(rioxarray_obj, dask)
 
     # Filter vals using mask
     if mask is not None:
-        vals, coords = _mask(vals, coords, mask)
+        vals, coords = _mask(vals, coords, mask, dask)
 
     methods = ["points", "polygons"]
 
@@ -105,11 +114,13 @@ def rio2gdf(rioxarray_obj, method="points", mask=None, crs=None):
     else:
         raise ValueError(f"Only '{methods}' are supported")
 
-    return gpd.GeoDataFrame(
-        pd.Series(vals.ravel(), name="Value"),
-        geometry=geoms,
-        crs=crs,
-    )
+    if dask:
+        df = pd.Series(vals.compute().ravel(), name=name)
+        geoms = geoms.compute()
+    else:
+        df = pd.Series(vals.ravel(), name=name)
+
+    return gpd.GeoDataFrame(df, geometry=geoms, crs=crs)
 
 
 def _get_rio_vals(rioxarray_obj):
@@ -117,11 +128,11 @@ def _get_rio_vals(rioxarray_obj):
     return np.array(rioxarray_obj).reshape(-1, 1)
 
 
-def _get_rio_coords(rioxarray_obj):
+def _get_rio_coords(rioxarray_obj, dask):
     """Get rio corodinates"""
     x, y = _get_xy_coords(rioxarray_obj)
 
-    return _cartesian_prod(x, y)
+    return _cartesian_prod(x, y, dask)
 
 
 def _get_xy_coords(rioxarray_obj):
@@ -129,20 +140,32 @@ def _get_xy_coords(rioxarray_obj):
     return np.array(rioxarray_obj.x), np.array(rioxarray_obj.y)
 
 
-def _cartesian_prod(x, y):
+def _cartesian_prod(x, y, dask=True):
     """Calculate the cartesian product of x and y coords"""
 
-    mesh = np.meshgrid(x, y)
-    elem = mesh[0].size
-    concat = np.concatenate(mesh).ravel()
+    if dask:
+        x_dask = da.from_array(x, chunks=len(x) // 5)
+        y_dask = da.from_array(y, chunks=len(y) // 5)
 
-    return np.reshape(concat, (2, elem)).T
+        mesh = da.meshgrid(x_dask, y_dask)
+        elem = mesh[0].size
+        concat = da.concatenate(mesh).ravel()
+        return da.reshape(concat, (2, elem)).T
+
+    else:
+        mesh = np.meshgrid(x, y)
+        elem = mesh[0].size
+        concat = np.concatenate(mesh).ravel()
+        return np.reshape(concat, (2, elem)).T
 
 
-def _mask(vals, coords, mask):
+def _mask(vals, coords, mask, dask=True):
     """mask values and coords"""
 
-    ind = np.where(vals > mask)[0]
+    if dask:
+        ind = da.where(vals > mask)[0]
+    else:
+        ind = np.where(vals > mask)[0]
 
     return vals[ind], coords[ind]
 
@@ -177,18 +200,46 @@ def _create_grid_geoms(coords, xres, yres):
     return box(xmins, ymins, xmaxs, ymaxs)
 
 
-def st_make_grid(gdf, res):
-    """Assumes projected coords e.g. res in metres"""
+def st_make_grid(
+    gdf=None,
+    total_bounds=None,
+    res=100,
+    crs=None,
+    include_xy=True,
+    index=True,
+):
+    """
+    A function that creates grids (square) covering the bounding box of a GeoDataFrame
+    Assumes projected coords e.g. res in metres"""
 
-    total_bounds = gdf.total_bounds
+    import random
+    from fastuuid import UUID
+
+    if total_bounds is None:
+        total_bounds = gdf.total_bounds
 
     x, y = _grid_centroids(total_bounds, res)
     coords = _cartesian_prod(x, y)
     geoms = _create_grid_geoms(coords, xres=res, yres=res)
-    # convex hull / concave hull
-    grid = gpd.GeoDataFrame(geometry=geoms, crs=gdf.crs)
 
-    return grid
+    if crs:
+        print(f"Using the following crs: {crs} for gridded GeoDataFrame")
+    elif gdf is not None and crs is None:
+        crs = gdf.crs
+        warnings.warn("Using crs set in GeoDataFrame")
+    elif crs is None:
+        warnings.warn("No crs or GeoDataFrame passed, so no crs is set for the resultant GeoDataFrame")
+
+    if include_xy:
+        df = pd.DataFrame({"x": coords[:, 0], "y": coords[:, 1]})
+        gdf = gpd.GeoDataFrame(df, geometry=geoms, crs=crs)
+    else:
+        gdf = gpd.GeoDataFrame(geometry=geoms, crs=crs)
+
+    if index:
+        gdf["uuid"] = [UUID(int=random.getrandbits(128), version=4) for x in range(len(gdf))]
+
+    return gdf
 
 
 def _grid_centroids(total_bounds, res):
