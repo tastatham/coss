@@ -142,6 +142,72 @@ def rio2gdf(
     return gpd.GeoDataFrame(df, geometry=geoms, crs=crs)
 
 
+def st_make_grid(
+    gdf=None,
+    total_bounds=None,
+    res=100,
+    crs=None,
+    include_xy=True,
+    index=True,
+    dask=True,
+):
+
+    """
+    Creates grids (square) covering the bounding box of a GeoDataFrame
+    Assumes projected coords e.g. res in metres
+
+    Parameters
+    ----------
+    gdf: gpd.GeoDataFrame (optional)
+        GeoDataFrame containing nation boundaries
+    total_bounds: list
+        total bounds of GeoDataFrame (optional)
+    res: int
+        cell resolution in m
+    crs: int
+        epsg code for coordinate reference system
+    include_xy: bool
+        whether to include x,y coords (mid point)
+    index: bool
+        whether to include a unique index
+    dask: bool
+        whether to use dask
+
+    Returns
+    -------
+    type: gpd.GeoDataFrame
+        GeoDataFrame containing cell geometries
+    """
+
+    if total_bounds is None:
+        total_bounds = gdf.total_bounds
+
+    x, y = _grid_centroids(total_bounds, res)
+    coords = _cartesian_prod(x, y, dask)
+    geoms = _create_grid_geoms(coords, xres=res, yres=res)
+
+    if crs:
+        print(f"Using the following crs: {crs} for gridded GeoDataFrame")
+    elif gdf is not None and crs is None:
+        crs = gdf.crs
+        warnings.warn("Using crs set in GeoDataFrame")
+    elif crs is None:
+        warnings.warn("No crs or GeoDataFrame passed, so no crs is set for the resultant GeoDataFrame")
+
+    if include_xy:
+        df = pd.DataFrame({"x": coords[:, 0], "y": coords[:, 1]})
+        gdf = gpd.GeoDataFrame(df, geometry=geoms, crs=crs)
+    else:
+        gdf = gpd.GeoDataFrame(geometry=geoms, crs=crs)
+
+    if index:
+        import random
+        from fastuuid import UUID
+        gdf["uuid"] = [UUID(int=random.getrandbits(128), version=4) for x in range(len(gdf))]
+
+    return gdf
+
+
 def _get_rio_vals(rioxarray_obj):
     """Get rio cell values"""
     return np.array(rioxarray_obj).reshape(-1, 1)
@@ -217,72 +283,6 @@ def _create_grid_geoms(coords, xres, yres):
 
     # Create polygons
     return box(xmins, ymins, xmaxs, ymaxs)
-
-
-def st_make_grid(
-    gdf=None,
-    total_bounds=None,
-    res=100,
-    crs=None,
-    include_xy=True,
-    index=True,
-    dask=True,
-):
-
-    """
-    Creates grids (square) covering the bounding box of a GeoDataFrame
-    Assumes projected coords e.g. res in metres
-
-    Parameters
-    ----------
-    gdf: gpd.GeoDataFrame (optional)
-        GeoDataFrame containing nation boundaries
-    total_bounds: list
-        total bounds of GeoDataFrame (optional)
-    res: int
-        cell resolution in m
-    crs: int
-        epsg code for coordinate reference system
-    include_xy: bool
-        whether to include x,y coords (mid point)
-    index: bool
-        whether to include a unique index
-    dask: bool
-        whether to use dask
-
-    Returns
-    -------
-    type: gpd.GeoDataFrame
-        GeoDataFrame containing cell geometries
-    """
-
-    if total_bounds is None:
-        total_bounds = gdf.total_bounds
-
-    x, y = _grid_centroids(total_bounds, res)
-    coords = _cartesian_prod(x, y, dask)
-    geoms = _create_grid_geoms(coords, xres=res, yres=res)
-
-    if crs:
-        print(f"Using the following crs: {crs} for gridded GeoDataFrame")
-    elif gdf is not None and crs is None:
-        crs = gdf.crs
-        warnings.warn("Using crs set in GeoDataFrame")
-    elif crs is None:
-        warnings.warn("No crs or GeoDataFrame passed, so no crs is set for the resultant GeoDataFrame")
-
-    if include_xy:
-        df = pd.DataFrame({"x": coords[:, 0], "y": coords[:, 1]})
-        gdf = gpd.GeoDataFrame(df, geometry=geoms, crs=crs)
-    else:
-        gdf = gpd.GeoDataFrame(geometry=geoms, crs=crs)
-
-    if index:
-        import random
-        from fastuuid import UUID
-        gdf["uuid"] = [UUID(int=random.getrandbits(128), version=4) for x in range(len(gdf))]
-
-    return gdf
 
 
 def _grid_centroids(total_bounds, res):
