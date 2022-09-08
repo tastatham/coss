@@ -87,8 +87,27 @@ def rio2gdf(
     dask=True,
 ):
     """
-    A function that convert a rioxarray object to a
-    GeoPandas GeoDataFrame object
+    Transform raster to GeoDataFrame as points or polygons
+
+    Parameters
+    ----------
+    rioxarray_obj: rioxarray object
+
+    methods: str
+        whether to return points (mid points) or polygons
+    mask: int
+        what cell values to not include
+    crs: int
+        epsg code for coordinate reference system
+    name: str
+        column name for cell values
+    dask: bool
+        whether to use dask
+
+    Returns
+    -------
+    type: gpd.GeoDataFrame
+        GeoDataFrame containing cell geometries and values
     """
 
     if crs is None:
