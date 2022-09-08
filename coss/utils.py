@@ -209,9 +209,33 @@ def st_make_grid(
     index=True,
     dask=True,
 ):
+
     """
-    A function that creates grids (square) covering the bounding box of a GeoDataFrame
-    Assumes projected coords e.g. res in metres"""
+    Creates grids (square) covering the bounding box of a GeoDataFrame
+    Assumes projected coords e.g. res in metres
+
+    Parameters
+    ----------
+    gdf: gpd.GeoDataFrame (optional)
+        GeoDataFrame containing nation boundaries
+    total_bounds: list
+        total bounds of GeoDataFrame (optional)
+    res: int
+        cell resolution in m
+    crs: int
+        epsg code for coordinate reference system
+    include_xy: bool
+        whether to include x,y coords (mid point)
+    index: bool
+        whether to include a unique index
+    dask: bool
+        whether to use dask
+
+    Returns
+    -------
+    type: gpd.GeoDataFrame
+        GeoDataFrame containing cell geometries
+    """
 
     import random
     from fastuuid import UUID
