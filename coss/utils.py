@@ -155,7 +155,7 @@ def rio2gdf(
         if dask:
             coords = coords.compute()
             geoms = geoms.compute()
-        df = pd.DataFrame({"x": coords[:, 0], "y": coords[:, 1]})
+        df = pd.DataFrame({"x": coords[:, 0], "y": coords[:, 1], name: vals.ravel()})
         gdf = gpd.GeoDataFrame(df, geometry=geoms, crs=crs)
     else:
         if dask:
