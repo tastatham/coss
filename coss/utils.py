@@ -139,26 +139,16 @@ def rio2gdf(
     else:
         raise ValueError(f"Only '{methods}' are supported")
 
-    if dask:
-        coords = coords.compute()
-        geoms = geoms.compute()
-
     if include_xy:
+        if dask:
+            coords = coords.compute()
+            geoms = geoms.compute()
         df = pd.DataFrame({"x": coords[:, 0], "y": coords[:, 1]})
         gdf = gpd.GeoDataFrame(df, geometry=geoms, crs=crs)
     else:
+        if dask:
+            geoms = geoms.compute()
         gdf = gpd.GeoDataFrame(geometry=geoms, crs=crs)
-
-    if index:
-        gdf, uid = _create_uid(gdf, uid_type="sources")
-
-    if dask:
-        df = pd.Series(vals.ravel(), name=name)
-        geoms = geoms.compute()
-    else:
-        df = pd.Series(vals.ravel(), name=name)
-
-    gdf = gpd.GeoDataFrame(df, geometry=geoms, crs=crs)
 
     if index:
         gdf, uid = _create_uid(gdf, uid_type="sources")
@@ -220,14 +210,15 @@ def st_make_grid(
             "No crs or GeoDataFrame passed, so no crs is set for the resultant GeoDataFrame"
         )
 
-    if dask:
-        coords = coords.compute()
-        geoms = geoms.compute()
-
     if include_xy:
+        if dask:
+            coords = coords.compute()
+            geoms = geoms.compute()
         df = pd.DataFrame({"x": coords[:, 0], "y": coords[:, 1]})
         gdf = gpd.GeoDataFrame(df, geometry=geoms, crs=crs)
     else:
+        if dask:
+            geoms = geoms.compute()
         gdf = gpd.GeoDataFrame(geometry=geoms, crs=crs)
 
     if index:
