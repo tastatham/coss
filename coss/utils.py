@@ -85,6 +85,7 @@ def rio2gdf(
     mask=None,
     crs=None,
     name="pop",
+    index=True,
     dask=True,
 ):
     """
@@ -102,6 +103,8 @@ def rio2gdf(
         epsg code for coordinate reference system
     name: str
         column name for cell values
+    index: bool
+        whether to include an index
     dask: bool
         whether to use dask
 
@@ -140,7 +143,12 @@ def rio2gdf(
     else:
         df = pd.Series(vals.ravel(), name=name)
 
-    return gpd.GeoDataFrame(df, geometry=geoms, crs=crs)
+    gdf = gpd.GeoDataFrame(df, geometry=geoms, crs=crs)
+
+    if index:
+        gdf, uid = _create_uid(gdf, uid_type="sources")
+
+    return gdf
 
 
 def st_make_grid(
@@ -208,10 +216,7 @@ def st_make_grid(
         gdf = gpd.GeoDataFrame(geometry=geoms, crs=crs)
 
     if index:
-
-        gdf["uuid"] = [
-            UUID(int=random.getrandbits(128), version=4) for x in range(len(gdf))
-        ]
+        gdf, uid = _create_uid(gdf, uid_type="sources")
 
     return gdf
 
