@@ -96,6 +96,7 @@ def rio2gdf(
     name="pop",
     include_xy=True,
     index=True,
+    index_name="tid",
     dask=True,
 ):
     """
@@ -116,6 +117,8 @@ def rio2gdf(
         whether to include x,y coords (mid point)
     index: bool
         whether to include an index
+    index_name: str
+        name of index
     dask: bool
         whether to use dask
 
@@ -160,7 +163,7 @@ def rio2gdf(
         gdf = gpd.GeoDataFrame(geometry=geoms, crs=crs)
 
     if index:
-        gdf, uid = _create_uid(gdf, uid_type="sources")
+        gdf, uid = create_uid(gdf, uid=index_name).set_index(index_name)
 
     return gdf
 
