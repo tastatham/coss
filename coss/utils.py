@@ -237,9 +237,6 @@ def st_make_grid(
         GeoDataFrame containing cell geometries
     """
 
-    import random
-    from fastuuid import UUID
-
     if total_bounds is None:
         total_bounds = gdf.total_bounds
 
@@ -262,6 +259,8 @@ def st_make_grid(
         gdf = gpd.GeoDataFrame(geometry=geoms, crs=crs)
 
     if index:
+        import random
+        from fastuuid import UUID
         gdf["uuid"] = [UUID(int=random.getrandbits(128), version=4) for x in range(len(gdf))]
 
     return gdf
