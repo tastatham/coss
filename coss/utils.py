@@ -85,6 +85,7 @@ def rio2gdf(
     mask=None,
     crs=None,
     name="pop",
+    include_xy=True,
     index=True,
     dask=True,
 ):
@@ -102,7 +103,8 @@ def rio2gdf(
     crs: int
         epsg code for coordinate reference system
     name: str
-        column name for cell values
+    include_xy: bool
+        whether to include x,y coords (mid point)
     index: bool
         whether to include an index
     dask: bool
@@ -136,6 +138,19 @@ def rio2gdf(
         geoms = rio2polygons(coords, rioxarray_obj)
     else:
         raise ValueError(f"Only '{methods}' are supported")
+
+    if dask:
+        coords = coords.compute()
+        geoms = geoms.compute()
+
+    if include_xy:
+        df = pd.DataFrame({"x": coords[:, 0], "y": coords[:, 1]})
+        gdf = gpd.GeoDataFrame(df, geometry=geoms, crs=crs)
+    else:
+        gdf = gpd.GeoDataFrame(geometry=geoms, crs=crs)
+
+    if index:
+        gdf, uid = _create_uid(gdf, uid_type="sources")
 
     if dask:
         df = pd.Series(vals.ravel(), name=name)
