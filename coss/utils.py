@@ -41,17 +41,26 @@ def _uid(df, uid=None, uid_type="sources"):
     return df, uid
 
 
-def _create_uid(df, uid_type="sources"):
-    """Creates a unique identifer"""
+def create_uid(df, uid):
+    """Create fast uid"""
     import random
     from fastuuid import UUID
+
+    df[uid] = [UUID(int=random.getrandbits(128), version=4) for x in range(len(df))]
+
+    return df
+
+
+def _create_uid(df, uid_type="sources"):
+    """Creates a unique identifer for areal interpolation methods"""
 
     if uid_type == "sources":
         uid = "sid"
     elif uid_type == "targets":
         uid = "tid"
 
-    df[uid] = [UUID(int=random.getrandbits(128), version=4) for x in range(len(df))]
+    df = create_uid(df, uid)
+
     return df, uid
 
 
@@ -163,6 +172,7 @@ def st_make_grid(
     crs=None,
     include_xy=True,
     index=True,
+    index_name="tid",
     dask=True,
 ):
 
@@ -184,6 +194,8 @@ def st_make_grid(
         whether to include x,y coords (mid point)
     index: bool
         whether to include a unique index
+    index_name: str
+        name of index
     dask: bool
         whether to use dask
 
@@ -222,8 +234,7 @@ def st_make_grid(
         gdf = gpd.GeoDataFrame(geometry=geoms, crs=crs)
 
     if index:
-        gdf, uid = _create_uid(gdf, uid_type="sources")
-        gdf = gdf.set_index("sid")
+        gdf = create_uid(gdf, uid=index_name).set_index(index_name)
 
     return gdf
 
