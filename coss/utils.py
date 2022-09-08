@@ -1,4 +1,6 @@
+import warnings
 import numpy as np
+import dask.array as da
 import pandas as pd
 import geopandas as gpd
 
@@ -39,14 +41,25 @@ def _uid(df, uid=None, uid_type="sources"):
     return df, uid
 
 
+def create_uid(df, uid):
+    """Create fast uid"""
+    import random
+    from fastuuid import UUID
+
+    df[uid] = [UUID(int=random.getrandbits(128), version=4) for x in range(len(df))]
+
+    return df
+
+
 def _create_uid(df, uid_type="sources"):
-    """Creates a unique identifer"""
-    import uuid
+    """Creates a unique identifer for areal interpolation methods"""
+
     if uid_type == "sources":
         uid = "sid"
     elif uid_type == "targets":
         uid = "tid"
-    df[uid] = df.apply(lambda _: uuid.uuid4(), axis=1)
+
+    df = create_uid(df, uid)
 
     return df, uid
 
@@ -75,10 +88,44 @@ def _get_bbox(gdf):
     return (xmin, ymin, xmax, ymax)
 
 
-def rio2gdf(rioxarray_obj, method="points", mask=None, crs=None):
+def rio2gdf(
+    rioxarray_obj,
+    method="points",
+    mask=None,
+    crs=None,
+    name="pop",
+    include_xy=True,
+    index=True,
+    index_name="tid",
+    dask=True,
+):
     """
-    A function that convert a rioxarray object to a
-    GeoPandas GeoDataFrame object
+    Transform raster to GeoDataFrame as points or polygons
+
+    Parameters
+    ----------
+    rioxarray_obj: rioxarray object
+
+    methods: str
+        whether to return points (mid points) or polygons
+    mask: int
+        what cell values to not include
+    crs: int
+        epsg code for coordinate reference system
+    name: str
+    include_xy: bool
+        whether to include x,y coords (mid point)
+    index: bool
+        whether to include an index
+    index_name: str
+        name of index
+    dask: bool
+        whether to use dask
+
+    Returns
+    -------
+    type: gpd.GeoDataFrame
+        GeoDataFrame containing cell geometries and values
     """
 
     if crs is None:
@@ -89,11 +136,11 @@ def rio2gdf(rioxarray_obj, method="points", mask=None, crs=None):
 
     # Get cell values and coords
     vals = _get_rio_vals(rioxarray_obj)
-    coords = _get_rio_coords(rioxarray_obj)
+    coords = _get_rio_coords(rioxarray_obj, dask)
 
     # Filter vals using mask
     if mask is not None:
-        vals, coords = _mask(vals, coords, mask)
+        vals, coords = _mask(vals, coords, mask, dask)
 
     methods = ["points", "polygons"]
 
@@ -104,11 +151,95 @@ def rio2gdf(rioxarray_obj, method="points", mask=None, crs=None):
     else:
         raise ValueError(f"Only '{methods}' are supported")
 
-    return gpd.GeoDataFrame(
-        pd.Series(vals.ravel(), name="Value"),
-        geometry=geoms,
-        crs=crs,
+    if include_xy:
+        if dask:
+            coords = coords.compute()
+            geoms = geoms.compute()
+        df = pd.DataFrame({"x": coords[:, 0], "y": coords[:, 1], name: vals.ravel()})
+        gdf = gpd.GeoDataFrame(df, geometry=geoms, crs=crs)
+    else:
+        if dask:
+            geoms = geoms.compute()
+        gdf = gpd.GeoDataFrame(geometry=geoms, crs=crs)
+
+    if index:
+        gdf, uid = create_uid(gdf, uid=index_name).set_index(index_name)
+
+    return gdf
+
+
+def st_make_grid(
+    gdf=None,
+    total_bounds=None,
+    res=100,
+    crs=None,
+    include_xy=True,
+    index=True,
+    index_name="tid",
+    dask=True,
+):
+
+    """
+    Creates grids (square) covering the bounding box of a GeoDataFrame
+    Assumes projected coords e.g. res in metres
+
+    Parameters
+    ----------
+    gdf: gpd.GeoDataFrame (optional)
+        GeoDataFrame containing nation boundaries
+    total_bounds: list
+        total bounds of GeoDataFrame (optional)
+    res: int
+        cell resolution in m
+    crs: int
+        epsg code for coordinate reference system
+    include_xy: bool
+        whether to include x,y coords (mid point)
+    index: bool
+        whether to include a unique index
+    index_name: str
+        name of index
+    dask: bool
+        whether to use dask
+
+    Returns
+    -------
+    type: gpd.GeoDataFrame
+        GeoDataFrame containing cell geometries
+    """
+
+    if total_bounds is None:
+        total_bounds = gdf.total_bounds
+
+    x, y = _grid_centroids(total_bounds, res)
+    coords = _cartesian_prod(x, y, dask)
+    geoms = _create_grid_geoms(coords, xres=res, yres=res)
+
+    if crs:
+        print(f"Using the following crs: {crs} for gridded GeoDataFrame")
+    elif gdf is not None and crs is None:
+        crs = gdf.crs
+        warnings.warn("Using crs set in GeoDataFrame")
+    elif crs is None:
+        warnings.warn(
+            "No crs or GeoDataFrame passed, so no crs is set for the resultant GeoDataFrame"
         )
+
+    if include_xy:
+        if dask:
+            coords = coords.compute()
+            geoms = geoms.compute()
+        df = pd.DataFrame({"x": coords[:, 0], "y": coords[:, 1]})
+        gdf = gpd.GeoDataFrame(df, geometry=geoms, crs=crs)
+    else:
+        if dask:
+            geoms = geoms.compute()
+        gdf = gpd.GeoDataFrame(geometry=geoms, crs=crs)
+
+    if index:
+        gdf = create_uid(gdf, uid=index_name).set_index(index_name)
+
+    return gdf
 
 
 def _get_rio_vals(rioxarray_obj):
@@ -116,11 +247,11 @@ def _get_rio_vals(rioxarray_obj):
     return np.array(rioxarray_obj).reshape(-1, 1)
 
 
-def _get_rio_coords(rioxarray_obj):
+def _get_rio_coords(rioxarray_obj, dask):
     """Get rio corodinates"""
     x, y = _get_xy_coords(rioxarray_obj)
 
-    return _cartesian_prod(x, y)
+    return _cartesian_prod(x, y, dask)
 
 
 def _get_xy_coords(rioxarray_obj):
@@ -128,20 +259,32 @@ def _get_xy_coords(rioxarray_obj):
     return np.array(rioxarray_obj.x), np.array(rioxarray_obj.y)
 
 
-def _cartesian_prod(x, y):
+def _cartesian_prod(x, y, dask=True):
     """Calculate the cartesian product of x and y coords"""
 
-    mesh = np.meshgrid(x, y)
-    elem = mesh[0].size
-    concat = np.concatenate(mesh).ravel()
+    if dask:
+        x_dask = da.from_array(x, chunks=len(x) // 5)
+        y_dask = da.from_array(y, chunks=len(y) // 5)
 
-    return np.reshape(concat, (2, elem)).T
+        mesh = da.meshgrid(x_dask, y_dask)
+        elem = mesh[0].size
+        concat = da.concatenate(mesh).ravel()
+        return da.reshape(concat, (2, elem)).T
+
+    else:
+        mesh = np.meshgrid(x, y)
+        elem = mesh[0].size
+        concat = np.concatenate(mesh).ravel()
+        return np.reshape(concat, (2, elem)).T
 
 
-def _mask(vals, coords, mask):
+def _mask(vals, coords, mask, dask=True):
     """mask values and coords"""
 
-    ind = np.where(vals > mask)[0]
+    if dask:
+        ind = da.where(vals > mask)[0]
+    else:
+        ind = np.where(vals > mask)[0]
 
     return vals[ind], coords[ind]
 
@@ -155,11 +298,17 @@ def rio2points(coords):
 def rio2polygons(coords, rioxarray_obj):
     """A function that returns polygon geoms for a rioxarray object"""
 
-    from pygeos import box
-
     # Juggle around x, y values
     af = rioxarray_obj.rio.transform()
     xres, yres = abs(af[0]), abs(af[4])
+
+    return _create_grid_geoms(coords, xres, yres)
+
+
+def _create_grid_geoms(coords, xres, yres):
+
+    """Create polygon grids based on x,y projected coords and res"""
+    from pygeos import box
 
     xmins = coords[:, 0] - (xres / 2)
     xmaxs = coords[:, 0] + (xres / 2)
@@ -168,6 +317,17 @@ def rio2polygons(coords, rioxarray_obj):
 
     # Create polygons
     return box(xmins, ymins, xmaxs, ymaxs)
+
+
+def _grid_centroids(total_bounds, res):
+    """Calculate centroid for all grid cells"""
+
+    xmin, ymin, xmax, ymax = total_bounds
+
+    x = np.arange(start=(xmin + res), stop=xmax, step=res)
+    y = np.arange(start=(ymin + res), stop=ymax, step=res)
+
+    return x, y
 
 
 def _h3fy_updated(gdf, resolution):
