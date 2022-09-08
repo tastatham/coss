@@ -207,6 +207,7 @@ def st_make_grid(
     crs=None,
     include_xy=True,
     index=True,
+    dask=True,
 ):
     """
     A function that creates grids (square) covering the bounding box of a GeoDataFrame
@@ -219,7 +220,7 @@ def st_make_grid(
         total_bounds = gdf.total_bounds
 
     x, y = _grid_centroids(total_bounds, res)
-    coords = _cartesian_prod(x, y)
+    coords = _cartesian_prod(x, y, dask)
     geoms = _create_grid_geoms(coords, xres=res, yres=res)
 
     if crs:
