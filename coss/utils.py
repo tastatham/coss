@@ -43,14 +43,15 @@ def _uid(df, uid=None, uid_type="sources"):
 
 def _create_uid(df, uid_type="sources"):
     """Creates a unique identifer"""
-    import uuid
+    import random
+    from fastuuid import UUID
 
     if uid_type == "sources":
         uid = "sid"
     elif uid_type == "targets":
         uid = "tid"
-    df[uid] = df.apply(lambda _: uuid.uuid4(), axis=1)
 
+    df[uid] = [UUID(int=random.getrandbits(128), version=4) for x in range(len(df))]
     return df, uid
 
 
@@ -134,7 +135,7 @@ def rio2gdf(
         raise ValueError(f"Only '{methods}' are supported")
 
     if dask:
-        df = pd.Series(vals.compute().ravel(), name=name)
+        df = pd.Series(vals.ravel(), name=name)
         geoms = geoms.compute()
     else:
         df = pd.Series(vals.ravel(), name=name)
@@ -192,7 +193,13 @@ def st_make_grid(
         crs = gdf.crs
         warnings.warn("Using crs set in GeoDataFrame")
     elif crs is None:
-        warnings.warn("No crs or GeoDataFrame passed, so no crs is set for the resultant GeoDataFrame")
+        warnings.warn(
+            "No crs or GeoDataFrame passed, so no crs is set for the resultant GeoDataFrame"
+        )
+
+    if dask:
+        coords = coords.compute()
+        geoms = geoms.compute()
 
     if include_xy:
         df = pd.DataFrame({"x": coords[:, 0], "y": coords[:, 1]})
@@ -201,9 +208,10 @@ def st_make_grid(
         gdf = gpd.GeoDataFrame(geometry=geoms, crs=crs)
 
     if index:
-        import random
-        from fastuuid import UUID
-        gdf["uuid"] = [UUID(int=random.getrandbits(128), version=4) for x in range(len(gdf))]
+
+        gdf["uuid"] = [
+            UUID(int=random.getrandbits(128), version=4) for x in range(len(gdf))
+        ]
 
     return gdf
 
