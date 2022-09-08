@@ -223,7 +223,7 @@ def st_make_grid(
 
     if index:
         gdf, uid = _create_uid(gdf, uid_type="sources")
-        gdf = gdf.set_index("sources")
+        gdf = gdf.set_index("sid")
 
     return gdf
 
