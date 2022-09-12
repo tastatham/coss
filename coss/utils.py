@@ -94,9 +94,8 @@ def rio2gdf(
     mask=None,
     crs=None,
     name="pop",
+    return_index=False,
     include_xy=True,
-    index=True,
-    index_name="tid",
     dask=True,
 ):
     """
@@ -115,10 +114,8 @@ def rio2gdf(
     name: str
     include_xy: bool
         whether to include x,y coords (mid point)
-    index: bool
-        whether to include an index
-    index_name: str
-        name of index
+    return_index: bool
+        whether to return rioxarray indexes
     dask: bool
         whether to use dask
 
@@ -140,7 +137,9 @@ def rio2gdf(
 
     # Filter vals using mask
     if mask is not None:
-        vals, coords = _mask(vals, coords, mask, dask)
+        ind = _mask(vals, coords, mask, dask)
+        vals = vals[ind]
+        coords = coords[ind]
 
     methods = ["points", "polygons"]
 
@@ -155,17 +154,23 @@ def rio2gdf(
         if dask:
             coords = coords.compute()
             geoms = geoms.compute()
-        df = pd.DataFrame({"x": coords[:, 0], "y": coords[:, 1], name: vals.ravel()})
-        gdf = gpd.GeoDataFrame(df, geometry=geoms, crs=crs)
+            ind = ind.compute()
+        df = pd.DataFrame(
+            {"index": ind, "x": coords[:, 0], "y": coords[:, 1], name: vals.ravel()}
+        )
     else:
         if dask:
             geoms = geoms.compute()
-        gdf = gpd.GeoDataFrame(geometry=geoms, crs=crs)
+            ind = ind.compute()
 
-    if index:
-        gdf, uid = create_uid(gdf, uid=index_name).set_index(index_name)
+            df = pd.DataFrame({"index": ind, name: vals.ravel()})
 
-    return gdf
+    gdf = gpd.GeoDataFrame(df, geometry=geoms, crs=crs)
+
+    if return_index:
+        return gdf, ind
+    else:
+        return gdf
 
 
 def st_make_grid(
@@ -286,7 +291,7 @@ def _mask(vals, coords, mask, dask=True):
     else:
         ind = np.where(vals > mask)[0]
 
-    return vals[ind], coords[ind]
+    return ind
 
 
 def rio2points(coords):
