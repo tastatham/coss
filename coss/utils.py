@@ -283,8 +283,8 @@ def _cartesian_prod(x, y, dask=True):
         return np.reshape(concat, (2, elem)).T
 
 
-def _mask(vals, coords, mask, dask=True):
-    """mask values and coords"""
+def _mask(vals, mask, dask=True):
+    """mask array"""
 
     if dask:
         ind = da.where(vals > mask)[0]
