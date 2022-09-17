@@ -137,7 +137,7 @@ def rio2gdf(
 
     # Filter vals using mask
     if mask is not None:
-        ind = _mask(vals, coords, mask, dask)
+        ind = _mask(vals, mask, dask)
         vals = vals[ind]
         coords = coords[ind]
 
