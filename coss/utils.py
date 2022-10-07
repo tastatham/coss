@@ -95,7 +95,7 @@ def reproject_array(coords, s_crs, t_crs):
     assert coords.shape[1] == 2  # x,y
 
     transformer = Transformer.from_crs(s_crs, t_crs)
-    x, y = transformer.transform(coords[:,0], coords[:,1])
+    x, y = transformer.transform(coords[:, 0], coords[:, 1])
 
     return np.array([x, y]).T
 
