@@ -255,8 +255,13 @@ def _get_rio_vals(rioxarray_obj):
 def _get_rio_coords(rioxarray_obj, dask):
     """Get rio corodinates"""
     x, y = _get_xy_coords(rioxarray_obj)
-
-    return _cartesian_prod(x, y, dask)
+    
+    prod, elem = _cartesian_prod(x, y, dask)
+    
+    if dask:
+        prod = prod.compute()
+    
+    return np.reshape(prod, (2, elem)).T
 
 
 def _get_xy_coords(rioxarray_obj):
@@ -273,14 +278,14 @@ def _cartesian_prod(x, y, dask=True):
 
         mesh = da.meshgrid(x_dask, y_dask)
         elem = mesh[0].size
-        concat = da.concatenate(mesh).ravel()
-        return da.reshape(concat, (2, elem)).T
-
+        prod = da.concatenate(mesh).ravel()
+     
     else:
         mesh = np.meshgrid(x, y)
         elem = mesh[0].size
-        concat = np.concatenate(mesh).ravel()
-        return np.reshape(concat, (2, elem)).T
+        prod = np.concatenate(mesh).ravel()
+    
+    return prod, elem
 
 
 def _mask(vals, mask, dask=True):
