@@ -3,7 +3,7 @@ import numpy as np
 import dask.array as da
 import pandas as pd
 import geopandas as gpd
-
+from pyproj import Transformer
 
 def _crs(sources, targets):
 
@@ -86,6 +86,16 @@ def _get_bbox(gdf):
 
     xmin, ymin, xmax, ymax = gdf.total_bounds
     return (xmin, ymin, xmax, ymax)
+
+
+def reproject_array(coords, s_crs, t_crs):
+    """Function reprojects numpy array (xy)
+    coordinate pairs from one projection to another"""
+
+    transformer = Transformer.from_crs(s_crs, t_crs)
+    x, y = transformer.transform(coords[:,0], coords[:,1])
+
+    return x, y
 
 
 def rio2gdf(
