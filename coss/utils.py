@@ -300,14 +300,14 @@ def rio2points(coords):
     return gpd.points_from_xy(coords[:, 0], coords[:, 1])
 
 
-def rio2polygons(coords, rioxarray_obj):
+def rio2polygons(coords, rioxarray_obj, factor):
     """A function that returns polygon geoms for a rioxarray object"""
 
     # Juggle around x, y values
     af = rioxarray_obj.rio.transform()
     xres, yres = abs(af[0]), abs(af[4])
 
-    return _create_grid_geoms(coords, xres, yres)
+    return _create_grid_geoms(coords, xres, yres, factor)
 
 
 def _create_grid_geoms(coords, xres, yres, factor=2):
