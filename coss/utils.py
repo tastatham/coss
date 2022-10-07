@@ -95,7 +95,7 @@ def reproject_array(coords, s_crs, t_crs):
     transformer = Transformer.from_crs(s_crs, t_crs)
     x, y = transformer.transform(coords[:,0], coords[:,1])
 
-    return x, y
+    return np.array([x, y]).T
 
 
 def rio2gdf(
