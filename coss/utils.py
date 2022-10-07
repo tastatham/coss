@@ -91,6 +91,8 @@ def _get_bbox(gdf):
 def reproject_array(coords, s_crs, t_crs):
     """Function reprojects numpy array (xy)
     coordinate pairs from one projection to another"""
+    
+    assert coords.shape[1] == 2  # x,y
 
     transformer = Transformer.from_crs(s_crs, t_crs)
     x, y = transformer.transform(coords[:,0], coords[:,1])
