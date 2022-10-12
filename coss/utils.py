@@ -103,6 +103,7 @@ def reproject_array(coords, s_crs, t_crs):
 def rio2gdf(
     rioxarray_obj,
     method="points",
+    factor=2,
     mask=None,
     crs=None,
     name="pop",
@@ -119,6 +120,8 @@ def rio2gdf(
 
     methods: str
         whether to return points (mid points) or polygons
+    factor: int
+        factor to multiply cell resolution by for polygons
     mask: int
         what cell values to not include
     crs: int
@@ -158,7 +161,7 @@ def rio2gdf(
     if method == methods[0]:
         geoms = rio2points(coords)
     elif method == methods[1]:
-        geoms = rio2polygons(coords, rioxarray_obj)
+        geoms = rio2polygons(coords, rioxarray_obj, factor)
     else:
         raise ValueError(f"Only '{methods}' are supported")
 
