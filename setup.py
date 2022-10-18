@@ -23,7 +23,7 @@ extra_require = [
 
 setup(
     name="coss",
-    version="0.12",
+    version="0.12.1",
     description="Python tools for spatial interpolation",
     long_description=(readme()),
     long_description_content_type="text/markdown",
