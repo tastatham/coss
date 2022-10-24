@@ -107,17 +107,14 @@ def rio2gdf(
     mask=None,
     crs=None,
     name="pop",
-    return_index=False,
     include_xy=True,
     dask=True,
 ):
     """
     Transform raster to GeoDataFrame as points or polygons
-
     Parameters
     ----------
     rioxarray_obj: rioxarray object
-
     methods: str
         whether to return points (mid points) or polygons
     factor: int
@@ -127,13 +124,11 @@ def rio2gdf(
     crs: int
         epsg code for coordinate reference system
     name: str
+        Column name to return with rioxarray values
     include_xy: bool
         whether to include x,y coords (mid point)
-    return_index: bool
-        whether to return rioxarray indexes
     dask: bool
         whether to use dask
-
     Returns
     -------
     type: gpd.GeoDataFrame
@@ -165,28 +160,19 @@ def rio2gdf(
     else:
         raise ValueError(f"Only '{methods}' are supported")
 
+
+    gdf = gpd.GeoDataFrame(
+        data=pd.DataFrame({name: vals.ravel()}),
+        geometry=geoms,
+        crs=crs,
+    )
+    
     if include_xy:
-        if dask:
-            coords = coords.compute()
-            geoms = geoms.compute()
-            ind = ind.compute()
-        df = pd.DataFrame(
-            {"index": ind, "x": coords[:, 0], "y": coords[:, 1], name: vals.ravel()}
-        )
-    else:
-        if dask:
-            geoms = geoms.compute()
-            ind = ind.compute()
+        gdf["x"] = coords[:, 0]
+        gdf["y"] = coords[:, 1]
 
-            df = pd.DataFrame({"index": ind, name: vals.ravel()})
-
-    gdf = gpd.GeoDataFrame(df, geometry=geoms, crs=crs)
-
-    if return_index:
-        return gdf, ind
-    else:
-        return gdf
-
+    return gdf
+    
 
 def st_make_grid(
     gdf=None,
