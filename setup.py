@@ -12,7 +12,7 @@ install_requires = [
     "geobootstrap==0.11",
     "dask_geopandas==0.2.0",
     "tobler==0.8.2",
-    "astropy==5.0.1",
+    "astropy",
 ]
 
 extra_require = [
